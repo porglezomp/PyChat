@@ -2,14 +2,22 @@
 # -*- coding: utf-8 -*-
 
 import xmpp, sys, select, os
-import subprocess
+from subprocess import PIPE, Popen
+from threading import Thread
+try:
+	from Queue import Queue, Empty
+except ImportError:
+	from queue import Queue, Empty
 import curses
 	
+#get a path to ~/.xsend
 path = os.path.join(os.path.expanduser('~'), '.xsend')
+#try to open the file
 try:
 	file = open(path, 'r')
 except:
 	raise IOError("No file at " + path)
+
 FACEBOOK_ID = file.readline()
 PASS = file.readline()
 me = file.readline()
@@ -18,12 +26,13 @@ current = me
 mymessage = ""
 
 handler = 0
+q = 0
 
-def readable():
-	if select.select([handler.stdout,],[],[], 0.0)[0]:
-		return True
-	return False
-	
+def enqueue_output(stream, q):
+	for line in iter(stream, 'b'):
+		q.put(line)
+		print line
+	stream.close()	
 
 def readloop():
 	global mymessage
@@ -42,18 +51,26 @@ def readloop():
 				else:
 					stdscr.echochar(c)
 					mymessage += chr(c)
-			if readable():
-				stdcr.addstr("Readable!")
-				stdscr.addstr(handler.stdout.read())
+			try: line = q.get_nowait()
+			except Empty:
+				pass
+			else:
+				stdscr.addstr(line); stdscr.refresh()
 		except KeyboardInterrupt:
 			break
 
 def main(stdscr):
 	global handler
+	global q
+
 	curses.echo()
 	curses.cbreak()
+	stdscr.timeout(30)
 
-	handler = subprocess.Popen(["./messagehandler.py"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+	handler = Popen(["python", "messagehandler.py"], stdin=PIPE, stdout=PIPE, shell=True)
+	q = Queue()
+	t = Thread(target = enqueue_output, args = (handler.stdout, q))
+	t.daemon = True
 	readloop()
 
 #set up curses

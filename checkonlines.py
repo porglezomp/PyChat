@@ -3,6 +3,7 @@
 
 import xmpp, sys, time, os
 
+#get login information
 path = os.path.join(os.path.expanduser('~'), '.xsend')
 try:
 	file = open(path, 'r')	
@@ -11,10 +12,12 @@ except:
 FACEBOOK_ID = file.readline()
 PASS = file.readline()
 file.close()
+#set up variables for changes in state
 onlines = {}
 changes = {}
 changed = False
 
+#presence callback
 def presenceCB(conn, msg):
 	global changed
 	fr = msg.getFrom()
@@ -28,6 +31,7 @@ def presenceCB(conn, msg):
 			changes[fr] = "went offline."
 	changed = True
 
+#main eventloop
 def GoOn(conn):
 	global changed
 	global changes
