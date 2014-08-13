@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import xmpp, sys, select, os, Queue, threading, ANSI
+import xmpp, sys, select, os, Queue, threading, ANSI, getpass
 try:
 	import readline
 except:
@@ -10,14 +10,34 @@ except:
 # Try to load the user info from the .xsend file
 # If the file isn't present then warn the user
 path = os.path.join(os.path.expanduser('~'), '.xsend')
+
 try:
 	file = open(path, 'r')
+	# If a file is found, pull out the info and put it in some vars.
+	FACEBOOK_ID = file.readline().rstrip()
+	PASS = file.readline().rstrip()
+	me = file.readline().rstrip()
+	file.close()
 except:
-	raise IOError("No file at " + path)
-FACEBOOK_ID = file.readline().rstrip()
-PASS = file.readline().rstrip()
-me = file.readline().rstrip()
-file.close()
+        # If the file is not found, ask the user if they want to enter the information now.
+	print "No file found at " + path
+	yes = ['yes', 'y', '']
+	no = ['no', 'n']
+	choice = raw_input("Login information not found. Enter login information now?(Y/n) ").lower()
+        # If the user picks yes, ask them for the information.
+	if choice in yes:
+                # We use FACEBOOK_ID here because if a file is found, this section will not be called.
+		FACEBOOK_ID = raw_input("Enter your Facebook ID (Example: john.smith.1@chat.facebook.com): ")
+		# If you run getpass in the interactive shell, it will echo password out:
+		PASS = getpass.getpass("Enter your Facebook password: ")
+		me = raw_input("Enter your Name: ")
+
+        # If the user picks NOT to enter information, close the program.
+	elif choice in no:
+		sys.exit(0)
+
+	else:
+		sys.exit(0)
 current = me
 mymessage = ""
 running = True
@@ -51,7 +71,7 @@ def selectname(name, roster):
    			firstname = roster.getName(i).split()[0]
    			if firstname.lower() == name.lower():
    				print "You are now speaking to " + roster.getName(i) + " (" + i + ")"
-				return i
+   				return i
 	# Well, we failed
 	return None
 
@@ -97,25 +117,25 @@ def handle(conn):
 jid=xmpp.protocol.JID(FACEBOOK_ID)
 sys.stdout.write("Initializing... "); sys.stdout.flush()
 jabber=xmpp.Client(jid.getDomain(), debug=[])
-print "done"
+print "Done!"
 
 # Connect to the facebook server
 sys.stdout.write("Connecting... "); sys.stdout.flush()
 if not jabber.connect(("chat.facebook.com",5222)):
     raise IOError('Could not connect to server.')
-print "done"
+print "Done!"
 
 # Send the server the password
 sys.stdout.write("Authorizing... "); sys.stdout.flush()
 if not jabber.auth(jid.getNode(),PASS):
     raise IOError('Could not auth with server.')
-print "done"
+print "Done!"
 
 # Initialize presence and get the roster
 sys.stdout.write("Getting roster... "); sys.stdout.flush()
 jabber.sendInitPresence(requestRoster=1)
 rosterobject = jabber.getRoster()
-print "done"
+print "Done!"
 
 # Set the message reception handler
 jabber.RegisterHandler('message', recvmessage)
