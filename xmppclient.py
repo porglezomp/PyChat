@@ -77,7 +77,8 @@ def recvmessage(conn, msg):
 			if (name != current):
 				print name + ":"
 				current = name
-			print "\r"+unicode(msg.getBody())
+			current_string = readline.get_line_buffer()
+			print "\r"+unicode(msg.getBody())+"\n"+current_string
 
 # This is the runloop for the client
 def handle(conn):
