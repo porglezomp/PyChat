@@ -35,6 +35,9 @@ except:
         # If the user picks NOT to enter information, close the program.
 	elif choice in no:
 		sys.exit(0)
+
+	else:
+		sys.exit(0)
 current = me
 mymessage = ""
 running = True
