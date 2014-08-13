@@ -1,7 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import xmpp, sys, select, os
+import xmpp, sys, select, os, Queue, threading, ANSI
+try:
+	import readline
+except:
+	import pyreadline as readline
 
 # Try to load the user info from the .xsend file
 # If the file isn't present then warn the user
@@ -10,19 +14,21 @@ try:
 	file = open(path, 'r')
 except:
 	raise IOError("No file at " + path)
-FACEBOOK_ID = file.readline()
-PASS = file.readline()
-me = file.readline()
+FACEBOOK_ID = file.readline().rstrip()
+PASS = file.readline().rstrip()
+me = file.readline().rstrip()
 file.close()
 current = me
 mymessage = ""
+running = True
 
-# If a message has been written to stdin
-def readable():
-	if select.select([sys.stdin,],[],[], 0.0)[0]:
-		return True
-	return False
-	
+q = Queue.Queue()
+
+# A worker to continuously read text into the queue
+def readline_worker():
+	global running
+	while running:
+		q.put(raw_input())
 
 # This funciton selects a jid based on a normal name out of your roster of people
 def selectname(name, roster):
@@ -53,7 +59,10 @@ def sendmsg(messagetext, to):
 	global current
 	if current != me:
 		current = me
-		print me + ": (and the above line)"
+		ANSI.ansi("A")
+		print me + ":"
+		ANSI.ansi("0K")
+		print mymessage + messagetext
 	message = xmpp.protocol.Message(to, mymessage + messagetext, typ="chat")
 	jabber.send(message)
 
@@ -68,22 +77,18 @@ def recvmessage(conn, msg):
 			if (name != current):
 				print name + ":"
 				current = name
-			padding = 0
-			if readable():
-				newtext = sys.stdin.read()
-				mymessage += newtext
-				padding = len(newtext) - len(str(msg.getBody()))
-				if padding < 0: padding = 0
-			print "\r"+unicode(msg.getBody())+" "*padding
-			sys.stdout.write(mymessage)
+			print "\r"+unicode(msg.getBody())
 
 # This is the runloop for the client
 def handle(conn):
 	while True:
 		try:
-			conn.Process(1)
-			if readable():	
-				sendmsg(sys.stdin.readline(), to)
+			conn.Process(0.2)
+			try:	
+				sendmsg(q.get_nowait(), to)
+				q.task_done()
+			except Queue.Empty:
+				pass
 		except KeyboardInterrupt:
 			break
 
@@ -115,7 +120,11 @@ print "done"
 jabber.RegisterHandler('message', recvmessage)
 # Get the name of the target person either here or from the commandline
 if len(sys.argv) < 2:
-	name = raw_input("Pick someone to send to: ")
+	try:
+		name = raw_input("Pick someone to send to: ")
+	except KeyboardInterrupt:
+		print "\n\nGoodbye!\n\n"
+		exit()
 else:
 	name = sys.argv[1]
 to = selectname(name, rosterobject)
@@ -125,5 +134,8 @@ else:
 	# Initialization is done!
 	print "Ready!"
 	print "Type Control-C at anytime to quit."
+	thread = threading.Thread(name="input", target=readline_worker)
+	thread.start()
 	handle(jabber)
+	running = False
 	print "\n\nGoodbye!\n\n"
