@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import xmpp, sys, select, os, Queue, threading, ANSI, getpass
+import xmpp, sys, select, os, Queue, threading, ANSI, getpass, pygame
 try:
         import readline
 except:
@@ -44,11 +44,11 @@ except:
                         savePass = raw_input ("Do you want to save your password?(Y/n) ").lower()
                         if savePass in yes or savePass == "":
                                 info.write(FACEBOOK_ID+"\n"+PASS+"\n"+me)
-                                print "Your information has been saved with your password."
+                                print "Your information has been saved to "+path+" with your password."
 
                         else:
                                 info.write(FACEBOOK_ID+"\n"+"\n"+me)
-                                print "Your information has been saved WITHOUT your password."
+                                print "Your information has been saved to "+path+" WITHOUT your password."
                         info.close()
 
                 else:
@@ -166,7 +166,7 @@ jabber.RegisterHandler('message', recvmessage)
 # Get the name of the target person either here or from the commandline
 if len(sys.argv) < 2:
         try:
-                name = raw_input("Pick someone to send to: ")
+                name = raw_input("Pick someone to chat with: ")
         except KeyboardInterrupt:
                 print "\n\nGoodbye!\n\n"
                 exit()
